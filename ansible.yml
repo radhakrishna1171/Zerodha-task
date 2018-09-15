@@ -1,0 +1,52 @@
+---
+ - hosts: {{vagrantbox ip adress}}
+   become: yes
+   tasks:
+
+   - name: Create a login user                                					         #creating a user....
+     user:
+       name: testuser
+       password: 'testuser'
+       groups: sudo   # Empty by default.
+       state: present
+       shell: /bin/bash                                           				         # Defaults to /bin/bash
+       system: no                                               				         # Defaults to no
+       createhome: yes                                          				         # Defaults to yes 
+       home: /home/testuser            					                                 # Defaults to /home/<username>
+
+   - name: set timezone to Asia/kolkata
+     timezone:
+       name: Asia/Kolkata                         					                 #Sets the system's timezone to "Asia/Kolkata"      
+
+   - name: Uploads a random local file from the host into the /home/testuser/ directory        
+     cp: 
+       src: /home/{{username}}/files 									# Uploads a random local file from the host into the /home/testuser/ directory
+       dest: /home/testuser/
+
+   - name: install python
+     raw: test -e /usr/bin/python || (apt -y update && apt install -y python minimal)			#install python
+   
+   
+   - name: Install Supervisor										#install supervisord latest version
+     apt: 
+       name: supervisor
+       state: latest
+   
+   - name: Install Consul
+     unarchive:												# install consul latest version with version
+       src: https://releases.hashicorp.com/consul/{{ consul_version }}/consul_{{ consul_version }}_linux_amd64.zip
+       remote_src: yes
+       dest: /usr/local/bin
+       creates: /usr/local/bin/consul
+       mode: 0555
+  
+   - name: Make Consul a service
+     copy: 
+       src: consul.service
+       dest: /etc/systemd/system/consul.service 
+
+   - name: Ensure config directory exists
+     file: 
+       path: /etc/systemd/system/consul.d
+       state: directory
+
